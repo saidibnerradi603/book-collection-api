@@ -37,11 +37,11 @@ class BookCreate(BaseModel):
         return v
     
 class BookUpdate(BaseModel):
-    title: Optional[str] = Field(min_length=1, max_length=100)
-    author: Optional[str] = Field(min_length=1, max_length=100)
-    year: Optional[int] = Field(gt=0, lt=datetime.now().year + 1)
-    rating: Optional[float] = Field(ge=0, le=5)
-    categories: Optional[List[str]] = Field(default=[])
+    title: Optional[str]  = Field(default=None, min_length=1, max_length=100)
+    author: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    year: Optional[int]   = Field(default=None, gt=0, lt=datetime.now().year + 1)
+    rating: Optional[float] = Field(default=None, ge=0, le=5)
+    categories: Optional[List[str]] = Field(default_factory=list)
     
     # Validate Rating 
     @field_validator('rating')
@@ -80,7 +80,7 @@ def root():
 # POST /books – Create a new book.
 @app.post("/books", status_code=201, tags=["Books"], 
          summary="Create a new book", response_description="The created book")
-def create_new_book(book:BookCreate):
+def create_new_book(book:BookCreate=Body(...)):
     book_dict=book.model_dump()
     result=book_collection.insert_one(book_dict)
     
@@ -178,7 +178,7 @@ def search_books(title: Optional[str] = Query(None, description="Search by title
 @app.put("/books/{book_id}", status_code=200, response_model=BookResponse, tags=["Books"], 
          summary="Update a book", response_description="The updated book")
 def update_book_by_id(book_id: str = Path(..., description="The MongoDB ObjectId of the book", example="689e1fb16253bf5c45c31d1c"),
-                     book_update: BookUpdate = Body(...)):
+                     book_update: BookUpdate = Body(..., description="Any subset of fields to update")):
     
     if not ObjectId.is_valid(book_id):
         raise HTTPException(status_code=400, detail="Invalid ID format")
