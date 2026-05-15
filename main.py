@@ -93,7 +93,9 @@ def create_new_book(book:BookCreate=Body(...)):
 # GET /books – List all books.    
 @app.get("/books",response_model=List[BookResponse],status_code=200,response_description="Get a list of all books",tags=["Books"])
 def list_books(sort_by:str=Query(...,description="sort on the basis of  year or rating ",example="year"),
-                     order:str=Query(...,description="Sort in ascending (asc) or descending (desc) order",example="asc")):
+                     order:str=Query(...,description="Sort in ascending (asc) or descending (desc) order",example="asc"),
+                     skip:int=Query(0, ge=0, description="Number of books to skip", example=0),
+                     limit:int=Query(10, ge=1, description="Maximum number of books to return", example=10)):
     
     
     sort_by_values=["year","rating"]
@@ -115,10 +117,10 @@ def list_books(sort_by:str=Query(...,description="sort on the basis of  year or 
         sort_params=None
         if sort_by:
             sort_params=[(sort_by, sort_direction)]
+        results = book_collection.find()
         if sort_params:
-            results = book_collection.find().sort(sort_params)
-        else :
-            results = book_collection.find()
+            results = results.sort(sort_params)
+        results = results.skip(skip).limit(limit)
         books=list(results) 
         return books
     except  Exception as e:
