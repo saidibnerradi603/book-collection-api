@@ -25,6 +25,7 @@ book_collection=books["book_collection"]
 class BookCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=100)
     author: str = Field(..., min_length=1, max_length=100)
+    isbn: str = Field(..., min_length=10, max_length=13, description="ISBN-10 or ISBN-13")
     year: int = Field(..., gt=0, lt=datetime.now().year + 1)
     rating: float = Field(..., ge=0, le=5)
     categories: List[str] = Field(default=[])
@@ -147,9 +148,9 @@ def get_book_by_id(book_id:str=Path(...,description="The MongoDB ObjectId of the
 
 
 # GET /books/search/ – Search books by title or author.
-@app.get("/books/search/", response_model=List[BookResponse], tags=["Books"],
-         summary="Search books by title or author", response_description="List of books matching search criteria")
-def search_books(title: Optional[str] = Query(None, description="Search by title (partial match)", example="Programming"),author: Optional[str] = Query(None, description="Search by author (partial match)", example="Peter")):
+@app.get("/books/find/", response_model=List[BookResponse], tags=["Books"],
+         summary="Find books by title, author, or ISBN", response_description="List of books matching search criteria")
+def find_books(title: Optional[str] = Query(None, description="Search by title (partial match)", example="Programming"),author: Optional[str] = Query(None, description="Search by author (partial match)", example="Peter"),isbn: Optional[str] = Query(None, description="Search by ISBN", example="9780134685991")):
     if not title and not author:
         raise HTTPException(status_code=400, detail="At least one search parameter (title or author) is required")
     
@@ -217,11 +218,11 @@ def delete_book_by_id(book_id: str = Path(..., description="The MongoDB ObjectId
         raise HTTPException(status_code=404, detail="Book not found")
         
     if result.deleted_count == 1:
-        return {"message": "Book deleted successfully","deletedBookId": book_id}
+        return {"message": "Book removed from collection","removedBookId": book_id, "status": "deleted"}
 
 # GET /categories – List all categories.
-@app.get("/categories",status_code=200,response_model=list[str],description="List all unique categories across all books",response_description="A Lsit of  all unique categories across all books",tags=["Categories"])
-def list_categories():
+@app.get("/tags",status_code=200,response_model=list[str],description="List all unique tags across all books",response_description="A list of all unique tags across all books",tags=["Tags"])
+def list_tags():
     categories_list=[]
     try:
         categories = book_collection.find({},{"categories": 1, "_id": 0})
