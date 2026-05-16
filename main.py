@@ -32,8 +32,8 @@ class BookCreate(BaseModel):
     # Validate Rating 
     @field_validator('rating')
     def validate_rating_decimal(cls, v):
-        if round(v * 10) != v * 10:
-            raise ValueError('Rating must have at most 1 decimal place')
+        if round(v * 100) != v * 100:
+            raise ValueError('Rating must have at most 2 decimal places')
         return v
     
 class BookUpdate(BaseModel):
@@ -253,3 +253,27 @@ def get_category_stats():
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get category statistics: {str(e)}")
+
+
+# GET /books/export – Export all books as JSON
+@app.get("/books/export", status_code=200, tags=["Books"],
+         summary="Export all books", response_description="All books exported as JSON array")
+def export_books(format: str = Query("json", description="Export format: json or csv", example="json")):
+    try:
+        books = list(book_collection.find())
+        for book in books:
+            book["_id"] = str(book["_id"])
+        
+        if format == "csv":
+            import csv
+            import io
+            output = io.StringIO()
+            if books:
+                writer = csv.DictWriter(output, fieldnames=books[0].keys())
+                writer.writeheader()
+                writer.writerows(books)
+            return {"format": "csv", "data": output.getvalue()}
+        
+        return {"format": "json", "count": len(books), "data": books}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to export books: {str(e)}")
